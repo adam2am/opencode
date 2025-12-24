@@ -1432,16 +1432,8 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
           output={props.part.state.status === "completed" ? props.part.state.output : undefined}
         />
         {props.part.state.status === "error" && (
-          <box paddingLeft={2}>
+          <box paddingLeft={container === "block" ? 0 : 2}>
             <text fg={theme.error}>{props.part.state.error.replace("Error: ", "")}</text>
-          </box>
-        )}
-        {permissions.length > 0 && (
-          <box gap={1}>
-            <text fg={theme.text}>
-              <span style={{ fg: theme.warning }}>△</span>
-              <span style={{ fg: theme.textMuted }}> Permission requested</span>
-            </text>
           </box>
         )}
       </box>
@@ -1507,7 +1499,7 @@ ToolRegistry.register<typeof BashTool>({
     const { theme } = useTheme()
     return (
       <>
-        <ToolTitle icon="#" fallback="Writing command..." when={props.input.command}>
+        <ToolTitle icon="#" fallback="Writing command..." when={props.input.description}>
           {props.input.description || "Shell"}
         </ToolTitle>
         <Show when={props.input.command}>

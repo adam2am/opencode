@@ -5,7 +5,11 @@
   //   "url": "https://enterprise.dev.opencode.ai",
   // },
   "instructions": ["STYLE_GUIDE.md"],
-  "permission": "ask",
+  "permission": {
+    "bash": "ask",
+    "edit": "ask",
+    "read": "ask",
+  },
   "provider": {
     "opencode": {
       "options": {},
