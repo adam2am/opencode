@@ -23,6 +23,7 @@ import {
   addDefaultParsers,
   MacOSScrollAccel,
   type ScrollAcceleration,
+  TextAttributes,
 } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
 import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@opencode-ai/sdk/v2"
@@ -69,7 +70,6 @@ import { usePromptRef } from "../../context/prompt"
 import { Filesystem } from "@/util/filesystem"
 import { DialogSubagent } from "./dialog-subagent.tsx"
 import { PermissionPrompt } from "./permission"
-import { permission } from "process"
 
 addDefaultParsers(parsers.parsers)
 
@@ -85,6 +85,7 @@ class CustomSpeedScroll implements ScrollAcceleration {
 
 const context = createContext<{
   width: number
+  sessionID: string
   conceal: () => boolean
   showThinking: () => boolean
   showTimestamps: () => boolean
@@ -950,6 +951,7 @@ export function Session() {
         get width() {
           return contentWidth()
         },
+        sessionID: route.sessionID,
         conceal,
         showThinking,
         showTimestamps,
@@ -1352,6 +1354,7 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
   const { showDetails } = use()
   const sync = useSync()
   const [margin, setMargin] = createSignal(0)
+  /*
   const component = createMemo(() => {
     // Hide tool if showDetails is false and tool completed successfully
     // But always show if there's an error or permission is required
@@ -1433,8 +1436,77 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
       </box>
     )
   })
+  */
 
-  return <Show when={component()}>{component()}</Show>
+  const toolprops = {
+    get metadata() {
+      return props.part.state.status === "pending" ? {} : (props.part.state.metadata ?? {})
+    },
+    get input() {
+      return props.part.state.input ?? {}
+    },
+    get output() {
+      return props.part.state.status === "completed" ? props.part.state.output : undefined
+    },
+    get permission() {
+      const permissions = sync.data.permission[props.message.sessionID] ?? []
+      const permissionIndex = permissions.findIndex((x) => x.callID === props.part.callID)
+      return permissions[permissionIndex]
+    },
+    get tool() {
+      return props.part.tool
+    },
+    get part() {
+      return props.part
+    },
+  }
+
+  return (
+    <Switch>
+      <Match when={props.part.tool === "bash"}>
+        <Bash {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "glob"}>
+        <Glob {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "read"}>
+        <Read {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "grep"}>
+        <Grep {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "list"}>
+        <List {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "webfetch"}>
+        <WebFetch {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "codesearch"}>
+        <CodeSearch {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "websearch"}>
+        <WebSearch {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "write"}>
+        <Write {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "edit"}>
+        <Edit {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "task"}>
+        <Task {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "patch"}>
+        <Patch {...toolprops} />
+      </Match>
+      <Match when={props.part.tool === "todowrite"}>
+        <TodoWrite {...toolprops} />
+      </Match>
+      <Match when={true}>
+        <GenericTool {...toolprops} />
+      </Match>
+    </Switch>
+  )
 }
 
 type ToolProps<T extends Tool.Info> = {
@@ -1443,12 +1515,13 @@ type ToolProps<T extends Tool.Info> = {
   permission: Record<string, any>
   tool: string
   output?: string
+  part: ToolPart
 }
 function GenericTool(props: ToolProps<any>) {
   return (
-    <ToolTitle icon="⚙" fallback="Writing command..." when={true}>
+    <InlineTool icon="⚙" pending="Writing command..." complete={true} part={props.part}>
       {props.tool} {input(props.input)}
-    </ToolTitle>
+    </InlineTool>
   )
 }
 
@@ -1485,28 +1558,115 @@ function ToolTitle(props: { fallback: string; when: any; icon: string; children:
   )
 }
 
+function InlineTool(props: { icon: string; complete: any; pending: string; children: JSX.Element; part: ToolPart }) {
+  const [margin, setMargin] = createSignal(0)
+  const { theme } = useTheme()
+  const ctx = use()
+  const sync = useSync()
+
+  const permission = createMemo(() => {
+    const callID = sync.data.permission[ctx.sessionID]?.at(0)?.callID
+    if (!callID) return false
+    return callID === props.part.callID
+  })
+
+  const fg = createMemo(() => {
+    if (permission()) return theme.warning
+    if (props.complete) return theme.textMuted
+    return theme.text
+  })
+
+  const error = createMemo(() => (props.part.state.status === "error" ? props.part.state.error : undefined))
+
+  const denied = createMemo(() => error()?.includes("rejected permission"))
+
+  return (
+    <box
+      marginTop={margin()}
+      paddingLeft={3}
+      renderBefore={function () {
+        const el = this as BoxRenderable
+        const parent = el.parent
+        if (!parent) {
+          return
+        }
+        if (el.height > 1) {
+          setMargin(1)
+          return
+        }
+        const children = parent.getChildren()
+        const index = children.indexOf(el)
+        const previous = children[index - 1]
+        if (!previous) {
+          setMargin(0)
+          return
+        }
+        if (previous.height > 1 || previous.id.startsWith("text-")) {
+          setMargin(1)
+          return
+        }
+      }}
+    >
+      <text paddingLeft={3} fg={fg()} attributes={denied() ? TextAttributes.STRIKETHROUGH : undefined}>
+        <Show fallback={<>~ {props.pending}</>} when={props.complete}>
+          <span style={{ bold: true }}>{permission() ? "△" : props.icon}</span> {props.children}
+        </Show>
+      </text>
+      <Show when={error() && !denied()}>
+        <text fg={theme.error}>{error()}</text>
+      </Show>
+    </box>
+  )
+}
+
+function BlockTool(props: { title: string; children: JSX.Element }) {
+  const { theme } = useTheme()
+  return (
+    <box
+      border={["left"]}
+      paddingTop={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      marginTop={1}
+      gap={1}
+      backgroundColor={theme.backgroundPanel}
+      customBorderChars={SplitBorder.customBorderChars}
+      borderColor={theme.background}
+    >
+      <text paddingLeft={3} fg={theme.textMuted}>
+        {props.title}
+      </text>
+      {props.children}
+    </box>
+  )
+}
+
+function Bash(props: ToolProps<typeof BashTool>) {
+  const output = createMemo(() => stripAnsi(props.metadata.output?.trim() ?? ""))
+  const { theme } = useTheme()
+  return (
+    <Switch>
+      <Match when={props.metadata.output !== undefined}>
+        <BlockTool title={"# " + (props.input.description ?? "Shell")}>
+          <box gap={1}>
+            <text fg={theme.text}>$ {props.input.command}</text>
+            <text fg={theme.text}>{output()}</text>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="$" pending="Writing command..." complete={props.input.command} part={props.part}>
+          {props.input.command}
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
 ToolRegistry.register<typeof BashTool>({
   name: "bash",
   container: "block",
-  render(props) {
-    const output = createMemo(() => stripAnsi(props.metadata.output?.trim() ?? ""))
-    const { theme } = useTheme()
-    return (
-      <>
-        <ToolTitle icon="#" fallback="Writing command..." when={props.input.description}>
-          {props.input.description || "Shell"}
-        </ToolTitle>
-        <Show when={props.input.command}>
-          <text fg={theme.text}>$ {props.input.command}</text>
-        </Show>
-        <Show when={output()}>
-          <box>
-            <text fg={theme.text}>{output()}</text>
-          </box>
-        </Show>
-      </>
-    )
-  },
+  render: Bash,
 })
 
 ToolRegistry.register<typeof ReadTool>({
@@ -1523,29 +1683,22 @@ ToolRegistry.register<typeof ReadTool>({
   },
 })
 
-ToolRegistry.register<typeof WriteTool>({
-  name: "write",
-  container: "block",
-  render(props) {
-    const { theme, syntax } = useTheme()
-    const code = createMemo(() => {
-      if (!props.input.content) return ""
-      return props.input.content
-    })
+function Write(props: ToolProps<typeof WriteTool>) {
+  const { theme, syntax } = useTheme()
+  const code = createMemo(() => {
+    if (!props.input.content) return ""
+    return props.input.content
+  })
 
-    const diagnostics = createMemo(() => {
-      const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
-      return props.metadata.diagnostics?.[filePath] ?? []
-    })
+  const diagnostics = createMemo(() => {
+    const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
+    return props.metadata.diagnostics?.[filePath] ?? []
+  })
 
-    const done = !!props.input.filePath
-
-    return (
-      <>
-        <ToolTitle icon="←" fallback="Preparing write..." when={done}>
-          Wrote {props.input.filePath}
-        </ToolTitle>
-        <Show when={done}>
+  return (
+    <Switch>
+      <Match when={props.metadata.diagnostics !== undefined}>
+        <BlockTool title={"# Wrote " + normalizePath(props.input.filePath!)}>
           <line_number fg={theme.textMuted} minWidth={3} paddingRight={1}>
             <code
               conceal={false}
@@ -1555,20 +1708,99 @@ ToolRegistry.register<typeof WriteTool>({
               content={code()}
             />
           </line_number>
-        </Show>
-        <Show when={diagnostics().length}>
-          <For each={diagnostics()}>
-            {(diagnostic) => (
-              <text fg={theme.error}>
-                Error [{diagnostic.range.start.line}:{diagnostic.range.start.character}]: {diagnostic.message}
-              </text>
-            )}
-          </For>
-        </Show>
-      </>
-    )
-  },
+          <Show when={diagnostics().length}>
+            <For each={diagnostics()}>
+              {(diagnostic) => (
+                <text fg={theme.error}>
+                  Error [{diagnostic.range.start.line}:{diagnostic.range.start.character}]: {diagnostic.message}
+                </text>
+              )}
+            </For>
+          </Show>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="←" pending="Preparing write..." complete={props.input.filePath} part={props.part}>
+          Write {normalizePath(props.input.filePath!)}
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
+ToolRegistry.register<typeof WriteTool>({
+  name: "write",
+  container: "block",
+  render: Write,
 })
+
+function Glob(props: ToolProps<typeof GlobTool>) {
+  return (
+    <InlineTool icon="✱" pending="Finding files..." complete={props.input.pattern} part={props.part}>
+      Glob "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+      <Show when={props.metadata.count}>({props.metadata.count} matches)</Show>
+    </InlineTool>
+  )
+}
+
+function Read(props: ToolProps<typeof ReadTool>) {
+  return (
+    <InlineTool icon="→" pending="Reading file..." complete={props.input.filePath} part={props.part}>
+      Read {normalizePath(props.input.filePath!)} {input(props.input, ["filePath"])}
+    </InlineTool>
+  )
+}
+
+function Grep(props: ToolProps<typeof GrepTool>) {
+  return (
+    <InlineTool icon="✱" pending="Searching content..." complete={props.input.pattern} part={props.part}>
+      Grep "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+      <Show when={props.metadata.matches}>({props.metadata.matches} matches)</Show>
+    </InlineTool>
+  )
+}
+
+function List(props: ToolProps<typeof ListTool>) {
+  const dir = createMemo(() => {
+    if (props.input.path) {
+      return normalizePath(props.input.path)
+    }
+    return ""
+  })
+  return (
+    <InlineTool icon="→" pending="Listing directory..." complete={props.input.path !== undefined} part={props.part}>
+      List {dir()}
+    </InlineTool>
+  )
+}
+
+function WebFetch(props: ToolProps<typeof WebFetchTool>) {
+  return (
+    <InlineTool icon="%" pending="Fetching from the web..." complete={(props.input as any).url} part={props.part}>
+      WebFetch {(props.input as any).url}
+    </InlineTool>
+  )
+}
+
+function CodeSearch(props: ToolProps<any>) {
+  const input = props.input as any
+  const metadata = props.metadata as any
+  return (
+    <InlineTool icon="◇" pending="Searching code..." complete={input.query} part={props.part}>
+      Exa Code Search "{input.query}" <Show when={metadata.results}>({metadata.results} results)</Show>
+    </InlineTool>
+  )
+}
+
+function WebSearch(props: ToolProps<any>) {
+  const input = props.input as any
+  const metadata = props.metadata as any
+  return (
+    <InlineTool icon="◈" pending="Searching web..." complete={input.query} part={props.part}>
+      Exa Web Search "{input.query}" <Show when={metadata.numResults}>({metadata.numResults} results)</Show>
+    </InlineTool>
+  )
+}
 
 ToolRegistry.register<typeof GlobTool>({
   name: "glob",
@@ -1618,21 +1850,18 @@ ToolRegistry.register<typeof ListTool>({
   },
 })
 
-ToolRegistry.register<typeof TaskTool>({
-  name: "task",
-  container: "block",
-  render(props) {
-    const { theme } = useTheme()
-    const keybind = useKeybind()
-    const dialog = useDialog()
-    const renderer = useRenderer()
+function Task(props: ToolProps<typeof TaskTool>) {
+  const { theme } = useTheme()
+  const keybind = useKeybind()
 
-    return (
-      <>
-        <ToolTitle icon="◉" fallback="Delegating..." when={props.input.subagent_type ?? props.input.description}>
-          {Locale.titlecase(props.input.subagent_type ?? "unknown")} Task "{props.input.description}"
-        </ToolTitle>
-        <Show when={props.metadata.summary?.length}>
+  return (
+    <Switch>
+      <Match when={props.metadata.summary?.length}>
+        <BlockTool
+          title={
+            "# " + Locale.titlecase(props.input.subagent_type ?? "unknown") + ' Task "' + props.input.description + '"'
+          }
+        >
           <box>
             <For each={props.metadata.summary ?? []}>
               {(task, index) => {
@@ -1646,14 +1875,30 @@ ToolRegistry.register<typeof TaskTool>({
               }}
             </For>
           </box>
-        </Show>
-        <text fg={theme.text}>
-          {keybind.print("session_child_cycle")}, {keybind.print("session_child_cycle_reverse")}
-          <span style={{ fg: theme.textMuted }}> to navigate between subagent sessions</span>
-        </text>
-      </>
-    )
-  },
+          <text fg={theme.text}>
+            {keybind.print("session_child_cycle")}, {keybind.print("session_child_cycle_reverse")}
+            <span style={{ fg: theme.textMuted }}> to navigate between subagent sessions</span>
+          </text>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool
+          icon="◉"
+          pending="Delegating..."
+          complete={props.input.subagent_type ?? props.input.description}
+          part={props.part}
+        >
+          {Locale.titlecase(props.input.subagent_type ?? "unknown")} Task "{props.input.description}"
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
+ToolRegistry.register<typeof TaskTool>({
+  name: "task",
+  container: "block",
+  render: Task,
 })
 
 ToolRegistry.register<typeof WebFetchTool>({
@@ -1696,39 +1941,31 @@ ToolRegistry.register({
   },
 })
 
-ToolRegistry.register<typeof EditTool>({
-  name: "edit",
-  container: "block",
-  render(props) {
-    const ctx = use()
-    const { theme, syntax } = useTheme()
+function Edit(props: ToolProps<typeof EditTool>) {
+  const ctx = use()
+  const { theme, syntax } = useTheme()
 
-    const view = createMemo(() => {
-      const diffStyle = ctx.sync.data.config.tui?.diff_style
-      if (diffStyle === "stacked") return "unified"
-      // Default to "auto" behavior
-      return ctx.width > 120 ? "split" : "unified"
-    })
+  const view = createMemo(() => {
+    const diffStyle = ctx.sync.data.config.tui?.diff_style
+    if (diffStyle === "stacked") return "unified"
+    // Default to "auto" behavior
+    return ctx.width > 120 ? "split" : "unified"
+  })
 
-    const ft = createMemo(() => filetype(props.input.filePath))
+  const ft = createMemo(() => filetype(props.input.filePath))
 
-    const diffContent = createMemo(() => props.metadata.diff ?? props.permission["diff"])
+  const diffContent = createMemo(() => props.metadata.diff)
 
-    const diagnostics = createMemo(() => {
-      const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
-      const arr = props.metadata.diagnostics?.[filePath] ?? []
-      return arr.filter((x) => x.severity === 1).slice(0, 3)
-    })
+  const diagnostics = createMemo(() => {
+    const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
+    const arr = props.metadata.diagnostics?.[filePath] ?? []
+    return arr.filter((x) => x.severity === 1).slice(0, 3)
+  })
 
-    return (
-      <>
-        <ToolTitle icon="←" fallback="Preparing edit..." when={props.input.filePath}>
-          Edit {normalizePath(props.input.filePath!)}{" "}
-          {input({
-            replaceAll: props.input.replaceAll,
-          })}
-        </ToolTitle>
-        <Show when={diffContent()}>
+  return (
+    <Switch>
+      <Match when={props.metadata.diff !== undefined}>
+        <BlockTool title={"← Edit " + normalizePath(props.input.filePath!)}>
           <box paddingLeft={1}>
             <diff
               diff={diffContent()}
@@ -1750,65 +1987,86 @@ ToolRegistry.register<typeof EditTool>({
               removedLineNumberBg={theme.diffRemovedLineNumberBg}
             />
           </box>
-        </Show>
-        <Show when={diagnostics().length}>
-          <box>
-            <For each={diagnostics()}>
-              {(diagnostic) => (
-                <text fg={theme.error}>
-                  Error [{diagnostic.range.start.line + 1}:{diagnostic.range.start.character + 1}] {diagnostic.message}
-                </text>
-              )}
-            </For>
-          </box>
-        </Show>
-      </>
-    )
-  },
+          <Show when={diagnostics().length}>
+            <box>
+              <For each={diagnostics()}>
+                {(diagnostic) => (
+                  <text fg={theme.error}>
+                    Error [{diagnostic.range.start.line + 1}:{diagnostic.range.start.character + 1}]{" "}
+                    {diagnostic.message}
+                  </text>
+                )}
+              </For>
+            </box>
+          </Show>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="←" pending="Preparing edit..." complete={props.input.filePath} part={props.part}>
+          Edit {normalizePath(props.input.filePath!)} {input({ replaceAll: props.input.replaceAll })}
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
+ToolRegistry.register<typeof EditTool>({
+  name: "edit",
+  container: "block",
+  render: Edit,
 })
+
+function Patch(props: ToolProps<typeof PatchTool>) {
+  const { theme } = useTheme()
+  return (
+    <Switch>
+      <Match when={props.output !== undefined}>
+        <BlockTool title="# Patch">
+          <box>
+            <text fg={theme.text}>{props.output?.trim()}</text>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="%" pending="Preparing patch..." complete={false} part={props.part}>
+          Patch
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
 
 ToolRegistry.register<typeof PatchTool>({
   name: "patch",
   container: "block",
-  render(props) {
-    const { theme } = useTheme()
-    return (
-      <>
-        <ToolTitle icon="%" fallback="Preparing patch..." when={true}>
-          Patch
-        </ToolTitle>
-        <Show when={props.output}>
-          <box>
-            <text fg={theme.text}>{props.output?.trim()}</text>
-          </box>
-        </Show>
-      </>
-    )
-  },
+  render: Patch,
 })
 
-ToolRegistry.register<typeof TodoWriteTool>({
-  name: "todowrite",
-  container: "block",
-  render(props) {
-    const { theme } = useTheme()
-    return (
-      <>
-        <Show when={!props.input.todos?.length}>
-          <ToolTitle icon="⚙" fallback="Updating todos..." when={true}>
-            Updating todos...
-          </ToolTitle>
-        </Show>
-        <Show when={props.metadata.todos?.length}>
+function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
+  return (
+    <Switch>
+      <Match when={props.metadata.todos?.length}>
+        <BlockTool title="# Todos">
           <box>
             <For each={props.input.todos ?? []}>
               {(todo) => <TodoItem status={todo.status} content={todo.content} />}
             </For>
           </box>
-        </Show>
-      </>
-    )
-  },
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="⚙" pending="Updating todos..." complete={false} part={props.part}>
+          Updating todos...
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
+ToolRegistry.register<typeof TodoWriteTool>({
+  name: "todowrite",
+  container: "block",
+  render: TodoWrite,
 })
 
 function normalizePath(input?: string) {

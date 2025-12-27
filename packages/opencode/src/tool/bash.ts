@@ -136,6 +136,7 @@ export const BashTool = Tool.define("bash", async () => {
       if (directories.size > 0) {
         const dirs = Array.from(directories)
         await PermissionNext.ask({
+          callID: ctx.callID,
           permission: "external_directory",
           message: `Requesting access to external directories: ${dirs.join(", ")}`,
           patterns: Array.from(directories),
@@ -148,6 +149,7 @@ export const BashTool = Tool.define("bash", async () => {
 
       if (patterns.size > 0) {
         await PermissionNext.ask({
+          callID: ctx.callID,
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),

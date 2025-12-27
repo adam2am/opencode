@@ -452,6 +452,7 @@ export type EventMessagePartRemoved = {
 
 export type PermissionRequest = {
   id: string
+  callID?: string
   sessionID: string
   permission: string
   patterns: Array<string>

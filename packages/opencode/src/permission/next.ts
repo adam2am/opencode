@@ -56,6 +56,7 @@ export namespace PermissionNext {
   export const Request = z
     .object({
       id: Identifier.schema("permission"),
+      callID: z.string().optional(),
       sessionID: Identifier.schema("session"),
       permission: z.string(),
       patterns: z.string().array(),
