@@ -6,6 +6,41 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/global/health": {
+      "get": {
+        "operationId": "global.health",
+        "summary": "Get health",
+        "description": "Get health information about the OpenCode server.",
+        "responses": {
+          "200": {
+            "description": "Health information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "healthy": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["healthy", "version"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.global.health({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/global/event": {
       "get": {
         "operationId": "global.event",
@@ -5379,6 +5414,15 @@
               },
               "responseBody": {
                 "type": "string"
+              },
+              "metadata": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
               }
             },
             "required": ["message", "isRetryable"]
@@ -6589,25 +6633,42 @@
         },
         "required": ["type", "properties"]
       },
+<<<<<<< HEAD
       "Event.file.edited": {
+=======
+      "Event.tui.prompt.append": {
+>>>>>>> dev
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+<<<<<<< HEAD
             "const": "file.edited"
+=======
+            "const": "tui.prompt.append"
+>>>>>>> dev
           },
           "properties": {
             "type": "object",
             "properties": {
+<<<<<<< HEAD
               "file": {
                 "type": "string"
               }
             },
             "required": ["file"]
+=======
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": ["text"]
+>>>>>>> dev
           }
         },
         "required": ["type", "properties"]
       },
+<<<<<<< HEAD
       "Todo": {
         "type": "object",
         "properties": {
@@ -6631,15 +6692,23 @@
         "required": ["content", "status", "priority", "id"]
       },
       "Event.todo.updated": {
+=======
+      "Event.tui.command.execute": {
+>>>>>>> dev
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+<<<<<<< HEAD
             "const": "todo.updated"
+=======
+            "const": "tui.command.execute"
+>>>>>>> dev
           },
           "properties": {
             "type": "object",
             "properties": {
+<<<<<<< HEAD
               "sessionID": {
                 "type": "string"
               },
@@ -6651,6 +6720,86 @@
               }
             },
             "required": ["sessionID", "todos"]
+=======
+              "command": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "session.list",
+                      "session.new",
+                      "session.share",
+                      "session.interrupt",
+                      "session.compact",
+                      "session.page.up",
+                      "session.page.down",
+                      "session.half.page.up",
+                      "session.half.page.down",
+                      "session.first",
+                      "session.last",
+                      "prompt.clear",
+                      "prompt.submit",
+                      "agent.cycle"
+                    ]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": ["command"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.tui.toast.show": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tui.toast.show"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "variant": {
+                "type": "string",
+                "enum": ["info", "success", "warning", "error"]
+              },
+              "duration": {
+                "description": "Duration in milliseconds",
+                "default": 5000,
+                "type": "number"
+              }
+            },
+            "required": ["message", "variant"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.mcp.tools.changed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "mcp.tools.changed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "server": {
+                "type": "string"
+              }
+            },
+            "required": ["server"]
+>>>>>>> dev
           }
         },
         "required": ["type", "properties"]
@@ -6949,98 +7098,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.tui.prompt.append": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "tui.prompt.append"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "text": {
-                "type": "string"
-              }
-            },
-            "required": ["text"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.tui.command.execute": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "tui.command.execute"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "command": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "session.list",
-                      "session.new",
-                      "session.share",
-                      "session.interrupt",
-                      "session.compact",
-                      "session.page.up",
-                      "session.page.down",
-                      "session.half.page.up",
-                      "session.half.page.down",
-                      "session.first",
-                      "session.last",
-                      "prompt.clear",
-                      "prompt.submit",
-                      "agent.cycle"
-                    ]
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
-              }
-            },
-            "required": ["command"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.tui.toast.show": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "tui.toast.show"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "title": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "variant": {
-                "type": "string",
-                "enum": ["info", "success", "warning", "error"]
-              },
-              "duration": {
-                "description": "Duration in milliseconds",
-                "default": 5000,
-                "type": "number"
-              }
-            },
-            "required": ["message", "variant"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Pty": {
         "type": "object",
         "properties": {
@@ -7236,10 +7293,23 @@
             "$ref": "#/components/schemas/Event.session.compacted"
           },
           {
+<<<<<<< HEAD
             "$ref": "#/components/schemas/Event.file.edited"
           },
           {
             "$ref": "#/components/schemas/Event.todo.updated"
+=======
+            "$ref": "#/components/schemas/Event.tui.prompt.append"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.command.execute"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.toast.show"
+          },
+          {
+            "$ref": "#/components/schemas/Event.mcp.tools.changed"
+>>>>>>> dev
           },
           {
             "$ref": "#/components/schemas/Event.command.executed"
@@ -7264,15 +7334,6 @@
           },
           {
             "$ref": "#/components/schemas/Event.vcs.branch.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.prompt.append"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.command.execute"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.toast.show"
           },
           {
             "$ref": "#/components/schemas/Event.pty.created"
@@ -7774,6 +7835,37 @@
             "description": "Toggle terminal title",
             "default": "none",
             "type": "string"
+          },
+          "tips_toggle": {
+            "description": "Toggle tips on home screen",
+            "default": "<leader>h",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LogLevel": {
+        "description": "Log level",
+        "type": "string",
+        "enum": ["DEBUG", "INFO", "WARN", "ERROR"]
+      },
+      "ServerConfig": {
+        "description": "Server configuration for opencode serve and web commands",
+        "type": "object",
+        "properties": {
+          "port": {
+            "description": "Port to listen on",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "hostname": {
+            "description": "Hostname to listen on",
+            "type": "string"
+          },
+          "mdns": {
+            "description": "Enable mDNS service discovery",
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -8325,6 +8417,9 @@
           "keybinds": {
             "$ref": "#/components/schemas/KeybindsConfig"
           },
+          "logLevel": {
+            "$ref": "#/components/schemas/LogLevel"
+          },
           "tui": {
             "description": "TUI specific settings",
             "type": "object",
@@ -8351,6 +8446,9 @@
                 "enum": ["auto", "stacked"]
               }
             }
+          },
+          "server": {
+            "$ref": "#/components/schemas/ServerConfig"
           },
           "command": {
             "description": "Command configuration, see https://opencode.ai/docs/commands",
@@ -8717,6 +8815,19 @@
               "url": {
                 "description": "Enterprise URL",
                 "type": "string"
+              }
+            }
+          },
+          "compaction": {
+            "type": "object",
+            "properties": {
+              "auto": {
+                "description": "Enable automatic compaction when context is full (default: true)",
+                "type": "boolean"
+              },
+              "prune": {
+                "description": "Enable pruning of old tool outputs (default: true)",
+                "type": "boolean"
               }
             }
           },
