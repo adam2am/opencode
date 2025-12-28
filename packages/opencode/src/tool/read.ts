@@ -33,6 +33,7 @@ export const ReadTool = Tool.define("read", {
     if (!ctx.extra?.["bypassCwdCheck"] && !Filesystem.contains(Instance.directory, filepath)) {
       const parentDir = path.dirname(filepath)
       await PermissionNext.ask({
+        callID: ctx.callID,
         permission: "external_directory",
         message: `Access file outside working directory: ${filepath}`,
         patterns: [parentDir],
@@ -48,6 +49,7 @@ export const ReadTool = Tool.define("read", {
     }
 
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "read",
       message: `Read file ${filepath}`,
       patterns: [filepath],

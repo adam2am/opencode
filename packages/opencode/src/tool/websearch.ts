@@ -61,6 +61,7 @@ export const WebSearchTool = Tool.define("websearch", {
   async execute(params, ctx) {
     const agent = await Agent.get(ctx.agent)
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "websearch",
       message: "Search web for: " + params.query,
       patterns: [params.query],

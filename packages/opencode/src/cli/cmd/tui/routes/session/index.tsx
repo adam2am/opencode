@@ -1571,7 +1571,6 @@ function InlineTool(props: { icon: string; complete: any; pending: string; child
   })
 
   const fg = createMemo(() => {
-    if (permission()) return theme.warning
     if (props.complete) return theme.textMuted
     return theme.text
   })
@@ -1609,7 +1608,10 @@ function InlineTool(props: { icon: string; complete: any; pending: string; child
     >
       <text paddingLeft={3} fg={fg()} attributes={denied() ? TextAttributes.STRIKETHROUGH : undefined}>
         <Show fallback={<>~ {props.pending}</>} when={props.complete}>
-          <span style={{ bold: true }}>{permission() ? "△" : props.icon}</span> {props.children}
+          <span style={{ bold: true }}>{props.icon}</span> {props.children}
+        </Show>
+        <Show when={permission()}>
+          ·<span style={{ fg: theme.warning }}> Permission required</span>
         </Show>
       </text>
       <Show when={error() && !denied()}>

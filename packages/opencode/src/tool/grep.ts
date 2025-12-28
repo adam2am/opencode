@@ -23,6 +23,7 @@ export const GrepTool = Tool.define("grep", {
 
     const agent = await Agent.get(ctx.agent)
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "grep",
       message: `Grep search: ${params.pattern}`,
       patterns: [params.pattern],

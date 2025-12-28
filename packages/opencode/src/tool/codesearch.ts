@@ -54,6 +54,7 @@ export const CodeSearchTool = Tool.define("codesearch", {
   async execute(params, ctx) {
     const agent = await Agent.get(ctx.agent)
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "codesearch",
       message: "Search code for: " + params.query,
       patterns: [params.query],

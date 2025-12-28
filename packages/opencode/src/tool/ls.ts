@@ -47,6 +47,7 @@ export const ListTool = Tool.define("list", {
 
     const agent = await Agent.get(ctx.agent)
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "list",
       message: `List directory: ${searchPath}`,
       patterns: [searchPath],

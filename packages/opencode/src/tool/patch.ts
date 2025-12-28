@@ -56,6 +56,7 @@ export const PatchTool = Tool.define("patch", {
       if (!Filesystem.contains(Instance.directory, filePath)) {
         const parentDir = path.dirname(filePath)
         await PermissionNext.ask({
+          callID: ctx.callID,
           permission: "external_directory",
           message: `Patch file outside working directory: ${filePath}`,
           patterns: [parentDir, path.join(parentDir, "*")],
@@ -141,6 +142,7 @@ export const PatchTool = Tool.define("patch", {
 
     // Check permissions if needed
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "edit",
       message: `Apply patch to ${fileChanges.length} files`,
       patterns: fileChanges.map((c) => path.relative(Instance.worktree, c.filePath)),

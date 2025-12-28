@@ -224,11 +224,11 @@ function Prompt<const T extends Record<string, string>>(props: {
           </For>
         </box>
         <box flexDirection="row" gap={2}>
-          <text fg={theme.textMuted}>
-            {"⇆"} <span style={{ fg: theme.text }}>select</span>
+          <text fg={theme.text}>
+            {"⇆"} <span style={{ fg: theme.textMuted }}>select</span>
           </text>
-          <text fg={theme.textMuted}>
-            <span style={{ fg: theme.text }}>enter</span> confirm
+          <text fg={theme.text}>
+            enter <span style={{ fg: theme.textMuted }}>confirm</span>
           </text>
         </box>
       </box>

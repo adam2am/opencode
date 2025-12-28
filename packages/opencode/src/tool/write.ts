@@ -60,6 +60,7 @@ export const WriteTool = Tool.define("write", {
     if (exists) await FileTime.assert(ctx.sessionID, filepath)
 
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "edit",
       message: `Create new file ${path.relative(Instance.directory, filepath)}`,
       patterns: [path.relative(Instance.worktree, filepath)],

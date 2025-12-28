@@ -26,6 +26,7 @@ export const WebFetchTool = Tool.define("webfetch", {
 
     const agent = await Agent.get(ctx.agent)
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "webfetch",
       message: "Fetch content from: " + params.url,
       patterns: [params.url],

@@ -32,6 +32,7 @@ export const TaskTool = Tool.define("task", async () => {
     async execute(params, ctx) {
       const callingAgent = await Agent.get(ctx.agent)
       await PermissionNext.ask({
+        callID: ctx.callID,
         permission: "task",
         message: `Launch task: ${params.description}`,
         patterns: [params.subagent_type],

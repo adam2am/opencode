@@ -21,6 +21,7 @@ export const GlobTool = Tool.define("glob", {
   async execute(params, ctx) {
     const agent = await Agent.get(ctx.agent)
     await PermissionNext.ask({
+      callID: ctx.callID,
       permission: "glob",
       message: `Glob search: ${params.pattern}`,
       patterns: [params.pattern],

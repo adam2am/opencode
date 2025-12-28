@@ -38,6 +38,7 @@ export const SkillTool = Tool.define("skill", async () => {
       }
 
       await PermissionNext.ask({
+        callID: ctx.callID,
         permission: "skill",
         patterns: [params.name],
         always: [params.name],
