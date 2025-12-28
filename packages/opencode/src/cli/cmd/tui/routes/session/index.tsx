@@ -1854,26 +1854,22 @@ function Task(props: ToolProps<typeof TaskTool>) {
   const { theme } = useTheme()
   const keybind = useKeybind()
 
+  const current = createMemo(() => props.metadata.summary?.findLast((x) => x.state.status !== "pending"))
+
   return (
     <Switch>
       <Match when={props.metadata.summary?.length}>
-        <BlockTool
-          title={
-            "# " + Locale.titlecase(props.input.subagent_type ?? "unknown") + ' Task "' + props.input.description + '"'
-          }
-        >
+        <BlockTool title={"# " + Locale.titlecase(props.input.subagent_type ?? "unknown") + " Task"}>
           <box>
-            <For each={props.metadata.summary ?? []}>
-              {(task, index) => {
-                const summary = props.metadata.summary ?? []
-                return (
-                  <text style={{ fg: task.state.status === "error" ? theme.error : theme.textMuted }}>
-                    {index() === summary.length - 1 ? "└" : "├"} {Locale.titlecase(task.tool)}{" "}
-                    {task.state.status === "completed" ? task.state.title : ""}
-                  </text>
-                )
-              }}
-            </For>
+            <text style={{ fg: theme.textMuted }}>
+              {props.input.description} ({props.metadata.summary?.length} toolcalls)
+            </text>
+            <Show when={current()}>
+              <text style={{ fg: current()!.state.status === "error" ? theme.error : theme.textMuted }}>
+                └ {Locale.titlecase(current()!.tool)}{" "}
+                {current()!.state.status === "completed" ? current()!.state.title : ""}
+              </text>
+            </Show>
           </box>
           <text fg={theme.text}>
             {keybind.print("session_child_cycle")}, {keybind.print("session_child_cycle_reverse")}

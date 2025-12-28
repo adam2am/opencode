@@ -47,6 +47,7 @@ export const EditTool = Tool.define("edit", {
     if (!Filesystem.contains(Instance.directory, filePath)) {
       const parentDir = path.dirname(filePath)
       await PermissionNext.ask({
+        callID: ctx.callID,
         permission: "external_directory",
         message: `Edit file outside working directory: ${filePath}`,
         patterns: [parentDir, path.join(parentDir, "*")],
@@ -69,13 +70,14 @@ export const EditTool = Tool.define("edit", {
         contentNew = params.newString
         diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
         await PermissionNext.ask({
+          callID: ctx.callID,
           permission: "edit",
           message: "Edit this file: " + path.relative(Instance.directory, filePath),
           patterns: [path.relative(Instance.worktree, filePath)],
           always: ["*"],
           sessionID: ctx.sessionID,
           metadata: {
-            filePath,
+            filepath: filePath,
             diff,
           },
 
@@ -102,12 +104,13 @@ export const EditTool = Tool.define("edit", {
       )
       await PermissionNext.ask({
         permission: "edit",
+        callID: ctx.callID,
         message: "Edit this file: " + path.relative(Instance.directory, filePath),
         patterns: [path.relative(Instance.worktree, filePath)],
         always: ["*"],
         sessionID: ctx.sessionID,
         metadata: {
-          filePath,
+          filepath: filePath,
           diff,
         },
         ruleset: agent.permission,
